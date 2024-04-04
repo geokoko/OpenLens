@@ -11,7 +11,8 @@ router = APIRouter()
 async def generate_response(websocket: WebSocket):
     await websocket.accept()
     while 1:
-        ####
+        data = await websocket.receive_text()
+        
         prompt = f"Please continue this conversation when given these details: [Emotion: {emotion}]\n[Speech: {speech}]\n[Response: "
         try:
             response = openai.Completion.create(
@@ -21,6 +22,6 @@ async def generate_response(websocket: WebSocket):
                 n=1,
                 stop=["\n", " [Response: "]
             )
-            return {"response": response.choices[0].text.strip()}
+            await websocket.send_text(response.choices[0].text.strip())
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

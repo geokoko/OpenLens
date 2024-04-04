@@ -1,20 +1,21 @@
 from google.cloud import speech
 import io
 
-def transcribe_audio(audiofile):
+def transcribe_audio(audiofile, language='en-US'):
+
+    client = speech.SpeechClient()
+
+    with open(audiofile, 'rb') as audio_file:
+        file_contents = audio_file.read()
+
+    audio = speech.RecognitionAudio(content=file_contents)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code=language,
+    )
+
     try:
-        client = speech.SpeechClient()
-
-        # Read the file contents
-        file_contents = audiofile
-
-        audio = speech.RecognitionAudio(content=file_contents)
-        config = speech.RecognitionConfig(
-            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-            sample_rate_hertz=16000,
-            language_code="en-US",
-        )
-
         response = client.recognize(config=config, audio=audio)
 
         transcript = ""
@@ -22,6 +23,7 @@ def transcribe_audio(audiofile):
             transcript += result.alternatives[0].transcript
 
         return {"transcript": transcript}
-    
+
     except Exception as e:
-        raise ValueError(status_code=500, detail=str(e))
+        print(f"An Error occured during the transcription. Explanation: {e}")
+        return {"transcript": "", "error": str(e)}
