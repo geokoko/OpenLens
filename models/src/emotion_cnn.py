@@ -5,8 +5,6 @@ import torch.nn.functional as F
 class Deep_Emotion(nn.Module):
     def __init__(self):
         super(Deep_Emotion,self).__init__()
-        # Loading resnet model
-        self.resnet = torch.hub.load('pytorch/vision:v0.6.0', 'resnet18', pretrained=True)
         
         self.conv1 = nn.Conv2d(1,10,3)
         self.conv2 = nn.Conv2d(10,10,3)
@@ -49,6 +47,7 @@ class Deep_Emotion(nn.Module):
         return x
 
     def forward(self,input):
+ 
         out = self.stn(input)
 
         out = F.relu(self.conv1(out))
