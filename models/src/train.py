@@ -32,11 +32,14 @@ transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=1),
     transforms.Resize((48, 48)),
     transforms.ToTensor(), # Convert the image to a PyTorch tensor
-    transforms.Normalize(mean=[0.485], std=[0.229]) # Normalize the pixel values
+    transforms.Normalize(mean=[0.5], std=[0.5]) # Normalize the pixel values
 ])
 
 # Define the label mapping
 label_mapping = {'angry': 0, 'disgust': 1, 'fear': 2, 'happy': 3, 'neutral': 4, 'sad': 5, 'surprise': 6}
+
+# Define class difficulty level
+difficulty_mapping = {0: 1.5, 1: 1.9, 2: 1.8, 3: 0.65, 4: 0.78, 5: 1.6, 6: 1.78}
 
 # Load the datasets
 train_dataset_fer = CustomDataset('../data/fer2013/images/train/', label_mapping=label_mapping, transform=transform)
@@ -63,21 +66,23 @@ print(f"Combined training dataset distribution: {combined_distribution}")
 
 # Calculate class weights for loss function
 total_samples = len(train_dataset_final)
-class_weights = {class_id : total_samples/ ( 7 * dict(train_dataset_final.get_class_distribution())[class_id] ) for class_id in dict(train_dataset_final.get_class_distribution()).keys()}
+class_weights = {class_id : difficulty_mapping[class_id]*total_samples/ ( 7 * dict(train_dataset_final.get_class_distribution())[class_id] ) for class_id in dict(train_dataset_final.get_class_distribution()).keys()}
 
 weights_tensor = torch.tensor([class_weights[i] for i in range(len(class_weights))], dtype=torch.float)
 # Create the data loaders
-train_loader = DataLoader(train_dataset_final, batch_size=32, shuffle=True, num_workers=4)
+train_loader = DataLoader(train_dataset_final, batch_size=64, shuffle=True, num_workers=4)
 print(f'Number of batches {len(train_loader)}')
-val_loader = DataLoader(val_dataset_final, batch_size=32, shuffle=False, num_workers=4)
+val_loader = DataLoader(val_dataset_final, batch_size=64, shuffle=False, num_workers=4)
 print(f'Number of batches {len(val_loader)}')
 
 # Initialize the model, optimizer and loss function
 # model = Deep_Emotion().to(device)
+epochs = 60
 model = Deep_Emotion().to(device)
-optimizer = optim.Adam(model.parameters(), lr=0.002, weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
 criterion = nn.CrossEntropyLoss(weight=weights_tensor.to(device)) # Cross-entropy loss for classification problems
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=2)
+#scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=len(train_loader), epochs=epochs)
 best_accuracy = 0.0
 best_val_loss = np.inf
 patience = 10
@@ -88,7 +93,7 @@ val_acc_history = []
 train_loss_history = []
 val_loss_history = []
 # Training loop
-epochs = 300
+
 for epoch in range(epochs):
     # Set predictions and labels lists
     print(f"Starting {epoch+1} epoch")
