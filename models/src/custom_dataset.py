@@ -2,7 +2,7 @@ from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import os
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import torch
 import torchvision.transforms as transforms
 from collections import Counter
@@ -33,9 +33,19 @@ class CustomDataset(Dataset):
             if os.path.isdir(class_path):
                 for image_name in os.listdir(class_path):
                     if image_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
-                        image_path = os.path.join(class_path, image_name)
-                        images.append(image_path)
-                        labels.append(self.label_mapping[label_name])
+                        try:
+                            image_path = os.path.join(class_path, image_name)
+                            print(image_path)
+                            with Image.open(image_path) as img:
+                                img.verify()
+                            images.append(image_path)
+                            labels.append(self.label_mapping[label_name])
+                        except (IOError, UnidentifiedImageError) as e:
+                            print(f"Error loading image: {image_path}: {e}")
+                    else:
+                        print(f"Skipped file (not an image): {image_name}")
+            else:
+                print (f"Warning! Directory does not exist: {class_path}")
         return images, labels
     
     def __len__(self):

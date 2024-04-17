@@ -160,23 +160,23 @@ if __name__ == '__main__':
 
         # Define transformations
         transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=3),
-            transforms.Resize((224, 224)),
+            transforms.Grayscale(num_output_channels=1),
+            transforms.Resize((48, 48)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            transforms.Normalize(mean=[0.5], std=[0.5])
         ])
 
         train_transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=3),
+            transforms.Grayscale(num_output_channels=1),
             transforms.RandomApply([transforms.ColorJitter(
-                brightness=0.5, contrast=0.5, saturation=0)], p=0.5),
+                brightness=0.2, contrast=0.2)], p=0.3),
             transforms.RandomApply(
-                [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
+                [transforms.RandomAffine(0, translate=(0.1, 0.1))], p=0.3),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomApply([transforms.RandomRotation(10)], p=0.5),
-            transforms.Resize((224, 224)),
+            transforms.RandomApply([transforms.RandomRotation(10)], p=0.3),
+            transforms.Resize((48, 48)),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            transforms.Normalize(mean=(0.5,), std=(0.5,))
         ])
 
 
@@ -201,8 +201,8 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_dataset_final, batch_size=batch_size, shuffle=False, num_workers=2)
 
         # Initialize the model, optimizer, and loss function
-        #model = Deep_Emotion().to(device)
-        model = MobileNet().to(device)
+        model = Deep_Emotion().to(device)
+        #model = MobileNet().to(device)
         optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9, nesterov=True)
         criterion = nn.CrossEntropyLoss(weight=weights_tensor.to(device))  # Cross-entropy loss
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.75, patience=5, verbose=True, min_lr=1e-6)
