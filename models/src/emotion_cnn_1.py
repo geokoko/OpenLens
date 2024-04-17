@@ -17,7 +17,7 @@ class Deep_Emotion(nn.Module):
         self.norm = nn.BatchNorm2d(10)
 
         self.fc1 = nn.Linear(810,50)
-        self.fc2 = nn.Linear(50,8)
+        self.fc2 = nn.Linear(50,7)
 
         self.localization = nn.Sequential(
             nn.Conv2d(1, 8, kernel_size=7),

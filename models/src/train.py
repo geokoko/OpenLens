@@ -13,9 +13,6 @@ import argparse
 import warnings
 warnings.filterwarnings('ignore')
 
-import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
 import os
 from torchvision import transforms, datasets, utils
 from PIL import Image
@@ -24,8 +21,8 @@ import importlib
 from custom_dataset import CustomDataset
 from collections import Counter
 
-def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping, difficulty_mapping):
-    patience = 10
+def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping):
+    pati = 40
     epochs_without_improvement = 0
     best_accuracy = 0.0
     best_val_loss = np.inf
@@ -99,7 +96,7 @@ def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, dev
         precision = precision_score(all_labels, all_preds, average='weighted')
         recall = recall_score(all_labels, all_preds, average='weighted')
         f1 = f1_score(all_labels, all_preds, average='weighted')
-        scheduler.step(validation_loss)
+        scheduler.step(validation_accuracy)
 
         print(f"Precision: {precision:.4f}")
         print(f"Recall: {recall:.4f}")
@@ -127,9 +124,8 @@ def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, dev
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
-            print(f"No improvement in validation loss for {epochs_without_improvement} epochs")
 
-        if epochs_without_improvement >= patience:
+        if epochs_without_improvement >= pati:
             print("Early stopping triggered.")
             break  # Exit from the training loop
 
@@ -145,66 +141,71 @@ def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, dev
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Configuration of setup and training process')
-    parser.add_argument('-d', '--data', type=str,required= True, help='Data folder that contains data files')
-    parser.add_argument('-hparams', '--hyperparams', type=bool, help='True when changing the hyperparameters e.g (batch size, LR, num. of epochs)')
-    parser.add_argument('-e', '--epochs', type= int, default=100, help= 'Number of epochs')
-    parser.add_argument('-lr', '--learning_rate', type= float, default = 0.001, help='Value of learning rate')
-    parser.add_argument('-bs', '--batch_size', type= int, default=64, help= 'Training/Validation batch size')
+    parser.add_argument('-d', '--data', type=str, required=True, help='Data folder that contains data files')
+    parser.add_argument('--hyperparams', type=bool, default=False, help='True when changing the hyperparameters e.g (batch size, LR, num. of epochs)')
+    parser.add_argument('-e', '--epochs', type=int, default=300, help='Number of epochs')
+    parser.add_argument('-lr', '--learning_rate', type=float, default=0.001, help='Value of learning rate')
+    parser.add_argument('-bs', '--batch_size', type=int, default=64, help='Training/Validation batch size')
     parser.add_argument('-t', '--train', type=bool, default=False, help='True when training')
     args = parser.parse_args()
 
-    if args.hyperparams:
-        epochs = args.epochs
-        lr = args.learning_rate
-        batchsize = args.batch_size
-    else :
-        epochs = 100
-        lr = 0.001
-        batchsize = 64
+    epochs = args.epochs if args.hyperparams else 100
+    lr = args.learning_rate if args.hyperparams else 0.001
+    batch_size = args.batch_size if args.hyperparams else 128
 
     if args.train:
         # Check if CUDA is available
-        train_on_gpu = torch.cuda.is_available()
-        device = torch.device("cuda" if train_on_gpu else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f'Using device: {device}')
 
+        # Define transformations
         transform = transforms.Compose([
-            transforms.Grayscale(num_output_channels=1),
-            transforms.Resize((48, 48)),
-            transforms.ToTensor(), # Convert the image to a PyTorch tensor
-            transforms.Normalize(mean=[0.5], std=[0.5]) # Normalize the pixel values
+            transforms.Grayscale(num_output_channels=3),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         ])
 
+        train_transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=3),
+            transforms.RandomApply([transforms.ColorJitter(
+                brightness=0.5, contrast=0.5, saturation=0)], p=0.5),
+            transforms.RandomApply(
+                [transforms.RandomAffine(0, translate=(0.2, 0.2))], p=0.5),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([transforms.RandomRotation(10)], p=0.5),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+        ])
+
+
         # Define the label mapping
-        label_mapping = {'angry': 0, 'disgust': 1, 'fear': 2, 'happy': 3, 'neutral': 4, 'sad': 5, 'surprise': 6}
+        label_mapping = {'anger': 0, 'contempt': 1, 'disgust': 2, 'fear': 3, 'happy': 4, 'neutral': 5, 'sad': 6, 'surprise': 7}
+        #class_difficulty = {0: 1.3, 1: 1.2, 2: 1.9, 3: 0.78, 4: 1.1, 5: 1.12, 6: 0.98}
 
-        # Define class difficulty level
-        difficulty_mapping = {0: 1.5, 1: 1.9, 2: 1.8, 3: 0.65, 4: 0.78, 5: 1.6, 6: 1.78}
-
-        train_dataset_affectnet = CustomDataset('../data/affectnet/train/', label_mapping=label_mapping, transform=transform)
-        val_dataset_affectnet = CustomDataset('../data/affectnet/validation/', label_mapping=label_mapping, transform=transform)
-
-        train_dataset_final = train_dataset_affectnet
-        val_dataset_final = val_dataset_affectnet
+        # Initialize datasets
+        train_dataset_final = CustomDataset(f'{args.data}/train/', label_mapping=label_mapping, transform=train_transform, balance_dataset=True)
+        val_dataset_final = CustomDataset(f'{args.data}/validation/', label_mapping=label_mapping, transform=transform)
         print(f"Training samples: {len(train_dataset_final)}")
+        print(f"Class distribution: {train_dataset_final.get_class_distribution()}")
         print(f"Validation samples: {len(val_dataset_final)}")
 
         # Calculate class weights for loss function
         total_samples = len(train_dataset_final)
-        class_weights = {class_id : difficulty_mapping[class_id]*total_samples/ ( 7 * dict(train_dataset_final.get_class_distribution())[class_id] ) for class_id in dict(train_dataset_final.get_class_distribution()).keys()}
+        class_weights = {class_id : total_samples/ ( 8 * dict(train_dataset_final.get_class_distribution())[class_id] ) for class_id in dict(train_dataset_final.get_class_distribution()).keys()}
+        weights_tensor = torch.tensor(list(class_weights.values()), dtype=torch.float)
 
-        weights_tensor = torch.tensor([class_weights[i] for i in range(len(class_weights))], dtype=torch.float)
         # Create the data loaders
-        train_loader = DataLoader(train_dataset_final, batch_size=64, shuffle=True, num_workers=4)
-        print(f'Number of batches {len(train_loader)}')
-        val_loader = DataLoader(val_dataset_final, batch_size=64, shuffle=False, num_workers=4)
-        print(f'Number of batches {len(val_loader)}')
+        train_loader = DataLoader(train_dataset_final, batch_size=batch_size, shuffle=True, num_workers=2)
+        val_loader = DataLoader(val_dataset_final, batch_size=batch_size, shuffle=False, num_workers=2)
 
-        # Initialize the model, optimizer and loss function
+        # Initialize the model, optimizer, and loss function
+        #model = Deep_Emotion().to(device)
+        model = MobileNet().to(device)
+        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9, nesterov=True)
+        criterion = nn.CrossEntropyLoss(weight=weights_tensor.to(device))  # Cross-entropy loss
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.75, patience=5, verbose=True, min_lr=1e-6)
 
-        epochs = 60
-        model = Deep_Emotion().to(device)
-        optimizer = optim.Adam(model.parameters(), lr=0.0005, weight_decay=1e-5)
-        criterion = nn.CrossEntropyLoss(weight=weights_tensor.to(device)) # Cross-entropy loss for classification problems
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=2)
+        # Train the model
         Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping)
