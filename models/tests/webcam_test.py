@@ -6,11 +6,12 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
-from emotion_cnn_1 import Deep_Emotion
+from emotion_cnn import Deep_Emotion
 from mobile_net import MobileNet
 import torchvision.transforms as transforms
 
-label_mapping = {0: 'anger', 1: 'disgust', 2: 'fear', 3: 'happy', 4: 'neutral', 5: 'sad', 6: 'surprise'}
+#label_mapping = {0: 'anger', 1: 'disgust', 2: 'fear', 3: 'happy', 4: 'neutral', 5: 'sad', 6: 'surprise'}
+label_mapping = {0: 'anger', 1: 'contempt', 2: 'disgust', 3: 'fear', 4: 'happy', 5: 'neutral', 6: 'sad', 7: 'surprise'}
 transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=1),  # Convert to grayscale
     transforms.Resize((48, 48)),  # Resize to 48x48
@@ -21,7 +22,7 @@ transform = transforms.Compose([
 model = Deep_Emotion()
 
 # Load your trained emotion detection model
-model_path = '../src/model/deep_emotion-1.pt'
+model_path = '../src/model/deep_emotion_affectnet_8_classes.pth'
 model_weights = torch.load(model_path)
 model.load_state_dict(model_weights)
 model.eval()
@@ -29,10 +30,10 @@ model.eval()
 # Haar Cascade to detect faces
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-vid_path = 'samples/2.mp4'
+vid_path = 'samples/1.mp4'
 
 # Initialize webcam
-cap = cv2.VideoCapture(vid_path)
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
@@ -59,14 +60,23 @@ while True:
         # Predict emotion
         with torch.no_grad():
             output = model(input_batch)
+            global probabilities
             probabilities = torch.softmax(output, dim=1)[0]
             max_prob, predicted = torch.max(probabilities, 0)
             predicted_emotion = label_mapping[predicted.item()]  # Map this to actual emotion
 
         # Display the emotion
-        emotion_text = f"{predicted_emotion} ({max_prob.item()*100:.2f})"
+        emotion_text = f"{predicted_emotion}"
         cv2.putText(frame, emotion_text, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36,255,12), 2)
+    
+    probs_image = np.zeros((100, 400, 3), np.uint8)
+    y_offset = 15
+    for idx, prob in enumerate(probabilities):
+        line = f"{label_mapping[idx]}: {prob*100:.2f}%"
+        cv2.putText(probs_image, line, (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (479,479,479), 1)
+        y_offset += 15
 
+    cv2.imshow('probabilities', probs_image)
     cv2.imshow('frame', frame)
 
     if cv2.waitKey(1) == ord('q'):
