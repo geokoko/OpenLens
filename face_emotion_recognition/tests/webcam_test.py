@@ -34,7 +34,7 @@ mtcnn = MTCNN(keep_all=True, device='cpu')
 vid_path = 'samples/2.mp4'
 
 # Initialize webcam
-cap = cv2.VideoCapture(vid_path)
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()

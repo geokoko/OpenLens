@@ -1,3 +1,3 @@
 /venv
-/models/data
-/models/src/tests/samples
+/face_emotion_recognition/data
+/face_emotion_recognition/src/tests/samples
