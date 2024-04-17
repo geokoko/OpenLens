@@ -8,14 +8,6 @@ import torchvision.transforms as transforms
 from collections import Counter
 from imblearn.over_sampling import RandomOverSampler
 
-"""Dataset used: FER 2013
-"Challenges in Representation Learning: A report on three machine learning
-contests." I Goodfellow, D Erhan, PL Carrier, A Courville, M Mirza, B
-Hamner, W Cukierski, Y Tang, DH Lee, Y Zhou, C Ramaiah, F Feng, R Li,
-X Wang, D Athanasakis, J Shawe-Taylor, M Milakov, J Park, R Ionescu,
-M Popescu, C Grozea, J Bergstra, J Xie, L Romaszko, B Xu, Z Chuang, and
-Y. Bengio. arXiv 2013."""
-
 class CustomDataset(Dataset):
     def __init__(self, dataset_path, label_mapping, transform=None, balance_dataset=False):
         self.dataset_path = dataset_path
@@ -35,7 +27,6 @@ class CustomDataset(Dataset):
                     if image_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
                         try:
                             image_path = os.path.join(class_path, image_name)
-                            print(image_path)
                             with Image.open(image_path) as img:
                                 img.verify()
                             images.append(image_path)

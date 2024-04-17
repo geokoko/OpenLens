@@ -21,7 +21,7 @@ import importlib
 from custom_dataset import CustomDataset
 from collections import Counter
 
-def Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping):
+def Train(model, epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping):
     pati = 40
     epochs_without_improvement = 0
     best_accuracy = 0.0
@@ -201,11 +201,11 @@ if __name__ == '__main__':
         val_loader = DataLoader(val_dataset_final, batch_size=batch_size, shuffle=False, num_workers=2)
 
         # Initialize the model, optimizer, and loss function
-        model = Deep_Emotion().to(device)
+        deep_emotion = Deep_Emotion().to(device)
         #model = MobileNet().to(device)
-        optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9, nesterov=True)
+        optimizer = optim.SGD(deep_emotion.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9, nesterov=True)
         criterion = nn.CrossEntropyLoss(weight=weights_tensor.to(device))  # Cross-entropy loss
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.75, patience=5, verbose=True, min_lr=1e-6)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', factor=0.75, patience=7, verbose=True, min_lr=1e-6)
 
         # Train the model
-        Train(epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping)
+        Train(deep_emotion, epochs, train_loader, val_loader, criterion, scheduler, optimizer, device, label_mapping)
