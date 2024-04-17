@@ -143,15 +143,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Configuration of setup and training process')
     parser.add_argument('-d', '--data', type=str, required=True, help='Data folder that contains data files')
     parser.add_argument('--hyperparams', type=bool, default=False, help='True when changing the hyperparameters e.g (batch size, LR, num. of epochs)')
-    parser.add_argument('-e', '--epochs', type=int, default=300, help='Number of epochs')
+    parser.add_argument('-e', '--epochs', type=int, default=400, help='Number of epochs')
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.001, help='Value of learning rate')
     parser.add_argument('-bs', '--batch_size', type=int, default=64, help='Training/Validation batch size')
     parser.add_argument('-t', '--train', type=bool, default=False, help='True when training')
     args = parser.parse_args()
 
-    epochs = args.epochs if args.hyperparams else 100
-    lr = args.learning_rate if args.hyperparams else 0.001
-    batch_size = args.batch_size if args.hyperparams else 128
+    epochs = args.epochs
+    lr = args.learning_rate
+    batch_size = args.batch_size
 
     if args.train:
         # Check if CUDA is available
