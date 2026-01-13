@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+torch
+torchvision
+torchaudio
+facenet-pytorch
+opencv-python
+pillow>=10.3.0
+numpy
+scikit-learn
+matplotlib
+seaborn
+httpx
+imbalanced-learn
